@@ -18,18 +18,18 @@ namespace MeetGroup.Api.V1.Controllers
     public class ReservasController : MainController
     {
         private readonly ISalaRepository _salaRepository;
+        private readonly IReservaRepository _reservaRepository;
         private readonly ISalaService _salaService;
+        private readonly IReservaService _reservaService;
         private readonly IMapper _mapper;
 
-        public ReservasController(ISalaRepository salaRepository,
-                                      IMapper mapper,
-                                      ISalaService salaService,
-                                      INotificador notificador,
-                                      IUser user) : base(notificador, user)
+        public ReservasController(ISalaRepository salaRepository, IReservaRepository reservaRepository, IMapper mapper, ISalaService salaService, IReservaService reservaService, INotificador notificador, IUser user) : base(notificador, user)
         {
             _salaRepository = salaRepository;
+            _reservaRepository = reservaRepository;
             _mapper = mapper;
             _salaService = salaService;
+            _reservaService = reservaService;
         }
 
         [HttpGet]
@@ -37,7 +37,12 @@ namespace MeetGroup.Api.V1.Controllers
         {
             try
             {
-                var salas = _mapper.Map<IEnumerable<SalaViewModel>>(await _salaRepository.Buscar(x => x.Capacidade >= buscarSalasDisponiveisViewModel.Capacidade || !buscarSalasDisponiveisViewModel.Capacidade.HasValue));
+                var dataInicio = Convert.ToDateTime(buscarSalasDisponiveisViewModel.DataInicio);
+                var dataFim = Convert.ToDateTime(buscarSalasDisponiveisViewModel.DataFim);
+                var horaInicio = TimeSpan.Parse(buscarSalasDisponiveisViewModel.HoraInicio);
+                var horaFim = TimeSpan.Parse(buscarSalasDisponiveisViewModel.HoraFim);
+
+                var salas = _mapper.Map<IEnumerable<SalaViewModel>>(await _reservaService.BuscarSalasDisponiveis(dataInicio, dataFim, horaInicio, horaFim));
 
                 return CustomResponse(salas);
             }

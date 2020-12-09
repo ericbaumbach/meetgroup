@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MeetGroup.Business.Intefaces;
@@ -9,18 +10,20 @@ namespace MeetGroup.Business.Services
 {
     public class ReservaService : BaseService, IReservaService
     {
-        private readonly IReservaRepository _ReservaRepository;
+        private readonly IReservaRepository _reservaRepository;
+        private readonly ISalaRepository _salaRepository;
 
-        public ReservaService(IReservaRepository ReservaRepository, INotificador notificador) : base(notificador)
+        public ReservaService(IReservaRepository reservaRepository, ISalaRepository salaRepository, INotificador notificador) : base(notificador)
         {
-            _ReservaRepository = ReservaRepository;
+            _reservaRepository = reservaRepository;
+            _salaRepository = salaRepository;
         }
 
         public async Task<bool> Adicionar(Reserva Reserva)
         {
             if (!ExecutarValidacao(new ReservaValidation(), Reserva)) return false;
 
-            await _ReservaRepository.Adicionar(Reserva);
+            await _reservaRepository.Adicionar(Reserva);
             
             return true;
         }
@@ -29,21 +32,42 @@ namespace MeetGroup.Business.Services
         {
             if (!ExecutarValidacao(new ReservaValidation(), Reserva)) return false;
 
-            await _ReservaRepository.Atualizar(Reserva);
+            await _reservaRepository.Atualizar(Reserva);
             
             return true;
         }
 
         public async Task<bool> Remover(Guid id)
         {
-            await _ReservaRepository.Remover(id);
+            await _reservaRepository.Remover(id);
 
             return true;
         }
 
+        public async Task<IEnumerable<Sala>> BuscarSalasDisponiveis(DateTime dataInicio, DateTime dataFim, TimeSpan horaInicio, TimeSpan horaFim)
+        {
+            var salasDisponiveis = new List<Sala>();
+
+            try
+            {
+                var salasReservadas = _reservaRepository
+                                                    .Buscar(x => x.DataInicio == dataInicio && x.DataFim == dataFim && x.HoraInicio == horaInicio && x.HoraFim == horaFim).Result
+                                                    .Select(x => x.SalaId)
+                                                    .ToArray();
+
+                salasDisponiveis = _salaRepository.Buscar(x => !salasReservadas.Contains(x.Id)).Result.ToList();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+
+            return salasDisponiveis;
+        }
+
         public void Dispose()
         {
-            _ReservaRepository?.Dispose();
+            _reservaRepository?.Dispose();
         }
     }
 }
